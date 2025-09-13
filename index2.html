@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Campus AI — Chatbot for Campus Info</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#6ee7b7;--muted:#94a3b8;--glass: rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,#071226 0%, #081433 60%);color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:24px}
+    .app{width:1100px;max-width:98%;height:80vh;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;box-shadow:0 10px 30px rgba(2,6,23,.6);display:grid;grid-template-columns:360px 1fr;overflow:hidden}
+    /* Sidebar */
+    .sidebar{padding:18px;background:linear-gradient(180deg,var(--card), rgba(11,18,32,0.6));border-right:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:12px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#60a5fa);display:flex;align-items:center;justify-content:center;font-weight:800;color:rgb(212, 215, 217);box-shadow:0 6px 18px rgba(99,102,241,0.12)}
+    h1{font-size:16px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .section{background:var(--glass);padding:10px;border-radius:20px}
+    .quick-list{display:flex;flex-direction:column;gap:8px;colour:white;}
+    .chip{padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03);font-size:13px;cursor:pointer}
+    .chip:hover{border-color:rgba(110,231,183,0.18)}
+    .db-controls{display:flex;gap:8px}
+    .btn{padding:8px 10px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);cursor:pointer;font-weight:600}
+    .btn.small{padding:6px 8px;font-size:13px}
+    .search{margin-top:6px;display:flex;gap:8px}
+    input[type=search]{flex:1;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:inherit}
+    /* Main */
+    .main{display:flex;flex-direction:column;gap:12px;padding:18px}
+    .chat-window{flex:1;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.015));border-radius:12px;padding:16px;overflow:auto}
+    .messages{display:flex;flex-direction:column;gap:12px}
+    .bubble{max-width:70%;padding:12px;border-radius:12px;line-height:1.3}
+    .user{align-self:flex-end;background:linear-gradient(180deg,#06202a,#063241);border:1px solid rgba(255,255,255,0.03)}
+    .bot{align-self:flex-start;background:linear-gradient(180deg,#07202b,#0b2f3a);border:1px solid rgba(255,255,255,0.02)}
+    .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .controls{display:flex;gap:8px;align-items:center}
+    textarea{width:100%;min-height:56px;resize:none;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.03);border-radius:10px;color:inherit}
+    .footer{display:flex;gap:8px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));padding:12px;border-radius:10px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .small{font-size:13px;color:var(--muted)}
+    .pill{display:inline-block;padding:6px 8px;border-radius:999px;border:1px solid rgba(255,255,255,0.03);font-weight:600}
+    /* responsive */
+    @media (max-width:920px){.app{grid-template-columns:1fr;height:92vh}.sidebar{order:2}.main{order:1}}
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Campus AI chatbot">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">CA</div>
+        <div>
+          <h1>Campus AI</h1>
+          <p class="lead">Ask about schedules, dining, library & more.</p>
+        </div>
+      </div>
+
+      <div class="section card" aria-hidden>
+        <div class="small">Quick examples</div>
+        <div class="quick-list" id="examples">
+          <!-- filled by JS -->
+        </div>
+      </div>
+
+      <div class="section card">
+        <div class="small">Search campus DB</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="dbSearch" type="search" placeholder="search buildings, staff, facility...">
+          <button class="btn small" id="searchBtn">Find</button>
+        </div>
+        <div id="dbResults" class="small" style="margin-top:8px;color:var(--muted)"></div>
+      </div>
+
+      <div class="section card">
+        <div class="small">Database</div>
+        <div style="display:flex;gap:8px;margin-top:8px" class="db-controls">
+          <button class="btn" id="exportBtn">Export JSON</button>
+          <button class="btn" id="importBtn">Import JSON</button>
+        </div>
+        <input id="fileInput" type="file" accept="application/json" style="display:none">
+      </div>
+
+      <div class="section card">
+        <div class="small">Session</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="clearBtn">New Chat</button>
+          <button class="btn" id="transcriptBtn">Download Chat</button>
+        </div>
+      </div>
+
+      <div style="margin-top:auto;font-size:12px;color:var(--muted)">Built for hackathon • Offline demo • Edit campus DB in sidebar</div>
+    </aside>
+
+    <main class="main">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="small">You are chatting with</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <strong>Campus AI Assistant</strong>
+              <span class="pill">v1.0</span>
+            </div>
+          </div>
+          <div class="small">Status: <span id="status">idle</span></div>
+        </div>
+      </div>
+
+      <div class="chat-window" id="chatWindow" role="log" aria-live="polite">
+        <div class="messages" id="messages"></div>
+      </div>
+      <div class="message bot">Hello! I can help you with campus information. Here are some options:
+        <ul class="options">
+          <li>Library</li>
+          <li>Canteen</li>
+          <li>Dining</li>
+          <li>Administrative Office</li>
+        </ul>
+      </div>
+
+      <div class="card footer">
+        <div style="flex:1">
+          <textarea id="input" placeholder="Type your question — e.g. 'When is the next bus to North Campus?'" aria-label="message input"></textarea>
+          <div class="small" style="margin-top:6px;color:var(--muted)">Tip: try short queries like "library hours" or "how to apply for transcript"</div>
+        </div>
+       
+        <div style="width:220px;display:flex;flex-direction:column;gap:8px">
+          <div class="controls">
+            <button class="btn" id="sendBtn">Send</button>
+            <button class="btn" id="voiceBtn">🎤 Voice</button>
+          </div>
+
+          <div class="grid">
+            <div class="card small">
+              <div><strong>Last intent</strong></div>
+              <div id="lastIntent" class="small">—</div>
+            </div>
+            <div class="card small">
+              <div><strong>Matched item</strong></div>
+              <div id="matched" class="small">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    /*************************************************************************
+     * Campus AI - Single-file demo
+     * - A tiny campus database (editable) lives in `CAMPUS_DB` below
+     * - A simple intent+entity matcher replies with structured answers
+     * - LocalStorage stores chat history; you can export/import DB
+     * - Replace `callRemoteAI()` with your real backend / OpenAI call
+     *************************************************************************/
+
+    // ---------- Campus database (sample) ----------
+    const CAMPUS_DB_KEY = 'campus_ai_db_v1';
+    const CHAT_HISTORY_KEY = 'campus_ai_chat_v1';
+
+    const SAMPLE_DB = {
+      schedules: [
+        {id:'bus1', title:'North Campus Shuttle', weekdays:'Mon-Fri', times:['08:00','09:00','10:30','12:00','14:00','16:30']},
+        {id:'exam1', title:'Finals Week — CS Dept', weekdays:'2025-12-10 to 2025-12-18', times:[]}
+      ],
+      dining: [
+        {id:'d1', name:'Main Canteen', hours:'07:30–20:00', menu:['Idli','Dosa','Veg Biryani','Coffee']},
+        {id:'d2', name:'North Cafe', hours:'09:00–22:00', menu:['Sandwich','Pizza slice','Cold coffee']}
+      ],
+      library: [
+        {id:'lib1', name:'Central Library', hours:'08:00–22:00', services:['Borrowing','Research help','Study rooms']},
+        {id:'lib2', name:'Engineering Library', hours:'09:00–19:00', services:['Course reserves','3D print']}
+      ],
+      facilities: [
+        {id:'f1', name:'Gym', location:'Building A, Basement', open:true},
+        {id:'f2', name:'Swimming Pool', location:'Sports Complex', open:false}
+      ],
+      admin: [
+        {id:'a1', title:'How to request transcript', steps:["Log into student portal","Go to 'Academic Services' > 'Transcripts'","Fill request form and submit fee"]},
+        {id:'a2', title:'Apply for leave', steps:["Download leave form","Get instructor signature","Submit to admin office"]}
+      ],
+      people: [
+        {id:'p1', name:'Dr. Anika Rao', role:'Head Librarian', email:'anika@campus.edu'},
+        {id:'p2', name:'Mr. Ramesh', role:'Cafeteria Manager', email:'ramesh@campus.edu'}
+      ]
+    };
+
+    // Load or init DB
+    function loadDB(){
+      const raw = localStorage.getItem(CAMPUS_DB_KEY);
+      if(!raw) { localStorage.setItem(CAMPUS_DB_KEY, JSON.stringify(SAMPLE_DB)); return structuredClone(SAMPLE_DB)}
+      try { return JSON.parse(raw) } catch(e){ localStorage.setItem(CAMPUS_DB_KEY, JSON.stringify(SAMPLE_DB)); return structuredClone(SAMPLE_DB)}
+    }
+    let CAMPUS_DB = loadDB();
+
+    // ---------- UI helpers ----------
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusEl = document.getElementById('status');
+    const lastIntentEl = document.getElementById('lastIntent');
+    const matchedEl = document.getElementById('matched');
+
+    function setStatus(s){ statusEl.textContent = s }
+
+    function addMessage(text, who='bot', meta=''){
+      const wrap = document.createElement('div');
+      wrap.className = 'bubble '+(who==='user'?'user':'bot');
+      if(meta) {
+        const m = document.createElement('div'); m.className='meta'; m.textContent = meta; wrap.appendChild(m);
+      }
+      const p = document.createElement('div'); p.innerHTML = text.replace(/\n/g,'<br>'); wrap.appendChild(p);
+      messagesEl.appendChild(wrap);
+      messagesEl.parentNode.scrollTop = messagesEl.parentNode.scrollHeight;
+      saveChatToStorage();
+    }
+
+    // ---------- Simple NLU (intent + entity matching) ----------
+    function nlu(text){
+      const t = text.toLowerCase();
+      // intents: schedule, dining, library, facility, admin, people, search
+      if(/(schedule|shuttle|bus|exam|timetable|time)/.test(t)) return {intent:'schedule'};
+      if(/(canteen|cafeteria|dining|menu|eat|food|coffee|pizza)/.test(t)) return {intent:'dining'};
+      if(/(library|book|borrow|study room|reserve|librar)/.test(t)) return {intent:'library'};
+      if(/(gym|pool|facility|sports|parking|lab|laboratory)/.test(t)) return {intent:'facility'};
+      if(/(transcript|leave|apply|admission|registration|fee|certificate|admin|procedure)/.test(t)) return {intent:'admin'};
+      if(/(who is|contact|email|phone|professor|dr\.|mr\.|ms\.)/.test(t)) return {intent:'people'};
+      // fallback: general search
+      return {intent:'search'};
+    }
+
+    // ---------- Simple responder (uses DB) ----------
+    function responder(text){
+      const {intent} = nlu(text);
+      lastIntentEl.textContent = intent;
+      setStatus('thinking...');
+
+      // small delay to make chat feel alive
+      return new Promise(resolve=>{
+        setTimeout(()=>{
+          let reply='I couldn\'t find anything — try rephrasing.';
+          let matched='—';
+
+          if(intent==='schedule'){
+            // find keywords for shuttle, exam
+            const k = /north|south|shuttle|bus|exam|finals/.exec(text.toLowerCase());
+            const found = CAMPUS_DB.schedules.filter(s=> text.toLowerCase().includes(s.title.toLowerCase().split(' ')[0]) || (k && s.title.toLowerCase().includes(k[0])) );
+            if(found.length===0){ reply = `Here are campus schedules I know:\n${CAMPUS_DB.schedules.map(s=>`• ${s.title} — ${s.weekdays} ${s.times.length?('\n   times: '+s.times.join(', ')) : ''}`).join('\n')}`; matched = 'Multiple'; }
+            else {const s = found[0]; reply = `Schedule — ${s.title}\n${s.weekdays}${s.times.length? '\nTimes: '+s.times.join(', '):''}`; matched = s.title}
+          }
+
+          else if(intent==='dining'){
+            const found = CAMPUS_DB.dining.filter(d=> text.toLowerCase().includes(d.name.toLowerCase().split(' ')[0]) || /menu|what|serve|hours/.test(text.toLowerCase()));
+            if(found.length===0) { reply = `Dining locations:\n${CAMPUS_DB.dining.map(d=>`• ${d.name} — ${d.hours}`).join('\n')}`; matched='Multiple'}
+            else { const d = found[0]; reply = `Dining — ${d.name}\nHours: ${d.hours}\nMenu: ${d.menu.join(', ')}`; matched = d.name }
+          }
+
+          else if(intent==='library'){
+            const found = CAMPUS_DB.library.filter(l=> text.toLowerCase().includes(l.name.toLowerCase().split(' ')[0]) || /hours|borrow|study|reserve/.test(text.toLowerCase()));
+            if(found.length===0) { reply = `Library locations:\n${CAMPUS_DB.library.map(l=>`• ${l.name} — ${l.hours}`).join('\n')}`; matched='Multiple'}
+            else { const l = found[0]; reply = `Library — ${l.name}\nHours: ${l.hours}\nServices: ${l.services.join(', ')}`; matched = l.name }
+          }
+
+          else if(intent==='facility'){
+            const found = CAMPUS_DB.facilities.filter(f=> text.toLowerCase().includes(f.name.toLowerCase().split(' ')[0]) || /open|where|location/.test(text.toLowerCase()));
+            if(found.length===0) { reply = `Facilities:\n${CAMPUS_DB.facilities.map(f=>`• ${f.name} — ${f.location} — ${f.open? 'Open':'Closed'}`).join('\n')}`; matched='Multiple'}
+            else { const f = found[0]; reply = `Facility — ${f.name}\nLocation: ${f.location}\nStatus: ${f.open? 'Open':'Closed'}`; matched = f.name }
+          }
+
+          else if(intent==='admin'){
+            const found = CAMPUS_DB.admin.filter(a=> text.toLowerCase().includes(a.title.toLowerCase().split(' ')[0]) || /transcript|leave|apply|registration/.test(text.toLowerCase()));
+            if(found.length===0) { reply = `Administrative procedures available:\n${CAMPUS_DB.admin.map(a=>`• ${a
